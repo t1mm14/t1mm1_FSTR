@@ -70,5 +70,47 @@ class PerevalCreateSerializer(serializers.ModelSerializer):
         return pereval
 
 
+class PerevalSubmitDataSerializer(serializers.ModelSerializer):
+    user = UserSerializer(read_only=True)
+    coords = CoordsSerializer()
+    images = ImageSerializer(many=True)
+    
+    class Meta:
+        model = Pereval
+        fields = '__all__'
+
+    def update(self, instance, validated_data):
+        """
+        Обновление перевала с сохранением пользовательских данных
+        """
+        if instance.status != 'NE':
+            raise serializers.ValidationError(
+                {"message": "Редактирование запрещено - запись не в статусе 'new'"}
+            )
+
+        # Обновляем координаты
+        coords_data = validated_data.pop('coords', None)
+        if coords_data:
+            coords_serializer = CoordsSerializer(instance.coords, data=coords_data)
+            if coords_serializer.is_valid():
+                coords_serializer.save()
+
+        # Обновляем изображения
+        images_data = validated_data.pop('images', None)
+        if images_data:
+            # Удаляем старые изображения
+            instance.images.all().delete()
+            # Создаем новые
+            for image_data in images_data:
+                Image.objects.create(pereval=instance, **image_data)
+
+        # Обновляем основные поля перевала
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+
+        return instance
+
+
 
 

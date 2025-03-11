@@ -4,7 +4,8 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.generics import CreateAPIView
 from django.db import DatabaseError
-from .serializers import UserSerializer, CoordsSerializer, PerevalSerializer, ImageSerializer, PerevalCreateSerializer
+from .serializers import UserSerializer, CoordsSerializer, PerevalSerializer, ImageSerializer, PerevalCreateSerializer, PerevalSubmitDataSerializer
+from django.shortcuts import get_object_or_404
 
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
@@ -64,3 +65,53 @@ class PerevalCreateAPIView(CreateAPIView):
             "message": pereval_serializer.errors,
             "id": None
         }, status=status.HTTP_400_BAD_REQUEST)
+
+class SubmitDataViewSet(viewsets.ModelViewSet):
+    serializer_class = PerevalSubmitDataSerializer
+    
+    def get_queryset(self):
+        """
+        Фильтрация перевалов по email пользователя
+        """
+        queryset = Pereval.objects.all()
+        email = self.request.query_params.get('user__email', None)
+        if email is not None:
+            queryset = queryset.filter(user__email=email)
+        return queryset
+
+    def retrieve(self, request, *args, **kwargs):
+        """
+        GET /submitData/<id>
+        Получение информации о перевале по id
+        """
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
+
+    def partial_update(self, request, *args, **kwargs):
+        """
+        PATCH /submitData/<id>
+        Редактирование существующей записи
+        """
+        instance = self.get_object()
+        
+        # Удаляем поля пользователя из данных, если они присутствуют
+        user_fields = ['user', 'email', 'fam', 'name', 'otc', 'phone']
+        for field in user_fields:
+            request.data.pop(field, None)
+
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        
+        try:
+            serializer.is_valid(raise_exception=True)
+            self.perform_update(serializer)
+            
+            return Response({
+                'state': 1,
+                'message': 'Запись успешно обновлена'
+            })
+        except serializers.ValidationError as e:
+            return Response({
+                'state': 0,
+                'message': str(e.detail)
+            }, status=status.HTTP_400_BAD_REQUEST)
