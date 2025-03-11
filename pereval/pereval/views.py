@@ -22,6 +22,12 @@ class ImageViewSet(viewsets.ModelViewSet):
     queryset = Image.objects.all()
     serializer_class = ImageSerializer
 
+
+#API endpoint для создания новой записи о перевале.
+    
+    #Принимает POST запрос с данными о перевале, включая информацию о пользователе,
+    #координатах и изображениях. При успешном создании возвращает ID созданной записи.
+    
 class PerevalCreateAPIView(CreateAPIView):
     serializer_class = PerevalCreateSerializer
 

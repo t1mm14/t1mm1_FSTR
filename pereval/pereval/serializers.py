@@ -34,7 +34,11 @@ class PerevalSerializer(serializers.ModelSerializer):
         model = Pereval
         fields = '__all__'
 
-
+#Сериализатор для создания новой записи о перевале.
+    
+    #Обрабатывает вложенные данные для пользователя, координат и изображений.
+    #При создании записи автоматически создаются связанные объекты.
+    
 class PerevalCreateSerializer(serializers.ModelSerializer):
     user = UserSerializer()
     coords = CoordsSerializer()
